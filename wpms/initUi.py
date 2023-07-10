@@ -66,8 +66,8 @@ multipartForm = {
     }
 }
 
-width = 1000
-height = 800
+width = 580
+height = 500
 
 
 class InitWindow(QMainWindow, form_class):
@@ -111,6 +111,10 @@ class InitWindow(QMainWindow, form_class):
     def initUI(self):
 
         print()
+
+
+        self.START.clicked.connect((self.uiStart))
+
         #         # Button/chk box등 기능 연결
         # self.pingBt.clicked.connect((self.pingBtMethod))
         # self.bindBt.clicked.connect((self.bindBtMethod))
@@ -147,6 +151,10 @@ class InitWindow(QMainWindow, form_class):
         # # onChange 기능 연결
         # self.msgArea.textChanged.connect(self.textChange)
 
+
+
+    def uiStart(self):
+        print('ttttttt')
 
 
     def addString(self):
