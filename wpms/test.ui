@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>563</width>
+    <width>567</width>
     <height>556</height>
    </rect>
   </property>
@@ -387,13 +387,23 @@
      <string>5678</string>
     </property>
    </widget>
+   <widget class="QComboBox" name="TYPES">
+    <property name="geometry">
+     <rect>
+      <x>280</x>
+      <y>20</y>
+      <width>94</width>
+      <height>22</height>
+     </rect>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>563</width>
+     <width>567</width>
      <height>26</height>
     </rect>
    </property>

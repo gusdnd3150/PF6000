@@ -57,8 +57,6 @@ class SocketUDPServer(QThread, QObject):
 
     def initServer(self):
         print('run UDP server Thread :: ip={}, port={}, type={}, scType={}'.format(self.ip, self.port, self.type, self.scType))
-
-        logger.info('UDP server start Thread :: ip={}, port={}, type={}, scType={}'.format(self.ip, self.port, self.type, self.scType))
         try:
 
             self.isRun = True
@@ -77,27 +75,6 @@ class SocketUDPServer(QThread, QObject):
                 byte_array = bytearray(message)
                 self.serverReviceMsgMethod(byte_array, '{}:{}'.format(address, ''))
                 #server.sendto('', address)
-
-
-            # try:
-            #     while True:
-            #         data, client_address = server.recvfrom(1024)
-            #         if not data:
-            #             break
-            #
-            #         client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            #         client_socket.connect(client_address)
-            #         client_socket.sendto(b"Server received your message.", client_address)
-            #
-            #         client_thread = threading.Thread(target=self.handle_client, args=(client_socket, client_address))
-            #         client_thread.start()
-            #
-            #     server.close()
-            # except:
-            #     traceback.print_exc()
-            #     self.serverErrorLog('Close Server ', '{}:{}'.format(self.ip, str(self.port)))
-            # finally:
-            #     server.close()
 
         except:
             print('UDP SERVER make eception')

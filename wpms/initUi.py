@@ -4,6 +4,8 @@ from datetime import datetime
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import QTimer
+
 from time import sleep
 import sys
 import os
@@ -33,38 +35,7 @@ form_class = uic.loadUiType(form)[0]
 
 # 콤보 영역
 scCombo = ['CLIENT', 'SERVER']
-typeCombo = ['TCP', 'UDP', 'WEBSOCKET']
-msgTyCombo = ['STRING','INT','SHORT','DOUBLE','BYTE','JSON']
-headerList = ['H4','H6']
-contentTyCombo = ['application/json']
-
-
-h6Form= [
-        {'msgTy':'string','value':''}
-    ]
-
-defaultForm = {
-    'METHOD':'POST',
-    'HEADER': {
-        'Content-Type': 'application/json'
-    },
-    'BODY': {
-        'test': ''
-    }
-}
-
-multipartForm = {
-    'METHOD':'POST',
-    'HEADER': {
-        'Content-Type': 'multipart/form-data;'
-    },
-    'BODY': {
-        'test': ''
-    },
-    'FILE':{
-
-    }
-}
+typeCombo = ['TCP', 'UDP']
 
 width = 580
 height = 500
@@ -80,20 +51,10 @@ class InitWindow(QMainWindow, form_class):
     socketList = []
     methodUtils = None
 
+    timer = None
+
     isRunClient = False
     isRunServer = False
-    rowCount = 0
-    maxRowCount = 23
-    fileObj = {'fileNm':'', 'file':''}
-
-    targetJson = []
-
-    jsonList = []
-    targetHeaer=[]
-
-    msgHdList = []
-    msgIdList = []
-
     msgDecoder = None
 
     def __init__(self):
@@ -103,18 +64,16 @@ class InitWindow(QMainWindow, form_class):
         self.setWindowIcon(QIcon(resource_path('icon.ico')))
         self.setFixedSize(width, height)
         self.initUI()
-        self.setWindowTitle("무슈캉 v1.0.0")
+        self.setWindowTitle("PF6000 테스터")
         self.show()
 
 
     # 이벤트, 변수 바인딩
     def initUI(self):
 
-        print()
-
-
+    
         self.START.clicked.connect((self.uiStart))
-
+        self.setComboMethod()
         #         # Button/chk box등 기능 연결
         # self.pingBt.clicked.connect((self.pingBtMethod))
         # self.bindBt.clicked.connect((self.bindBtMethod))
@@ -152,391 +111,96 @@ class InitWindow(QMainWindow, form_class):
         # self.msgArea.textChanged.connect(self.textChange)
 
 
-
+    # start 버튼
     def uiStart(self):
-        print('ttttttt')
+        ip = self.IP.text()
+        port = self.PORT.text()
+        flag = self.START.text().upper()
+        protocol = self.TYPES.currentText()
+        toolSk = None
+        skInfo = {}
 
+        keepSec = int(self.KEEPALIVE.value()) * 1000
+        
 
-    def addString(self):
-        msg = self.msgArea.toPlainText()
-        if msg == '':
-            return
         try:
-                msgTemp = {}
-                msgTemp['MSG_TY'] = 'STRING'
-                msgTemp['VALUE'] = msg
+            if flag == 'START':
+                self.START.setText('End')
+                if self.isRunServer == True:
+                    return
 
-                self.sendMsg.append(msgTemp)
-                self.msgList.append(msg)
-                self.msgArea.clear()
+                if protocol == 'TCP':
+                    toolSk = SocketServer(ip, port, protocol, flag)
+                    toolSk.damon = True
+                    toolSk.start()
+                    toolSk.serverReciveData.connect(self.serverReciveDataMethod)
+
+                    skInfo['SK_INFO'] = toolSk
+                    skInfo['SK_TYPE'] = 'SERVER'
+                    self.socketList.append(skInfo)
+                    self.isRunServer = True
+                    self.lockTargetYn('Y')
+                    self.timer = QTimer()
+                    self.timer.timeout.connect(self.fnKeepalive)  # 스케줄링할 작업을 연결합니다
+                    self.timer.start(keepSec)
+                   
+                elif protocol =='UDP':
+                    toolSk = SocketUDPServer(ip, port, protocol, flag)
+                    toolSk.damon = True
+                    toolSk.start()
+                    skInfo['SK_INFO'] = toolSk
+                    skInfo['SK_TYPE'] = 'SERVER'
+                    self.socketList.append(skInfo)
+                    self.isRunServer = True
+                    self.lockTargetYn('Y')
+                    self.timer = QTimer()
+                    self.timer.timeout.connect(self.fnKeepalive)  # 스케줄링할 작업을 연결합니다
+                    self.timer.start(keepSec)
+
+
+
+            elif flag == 'END':
+                for i in range(0, len(self.socketList)):
+                    item = self.socketList.pop(0)
+                    item['SK_INFO'].closeSocket()
+                self.START.setText('Start')
+                self.isRunServer = False
+                self.lockTargetYn('N')
+                self.timer.stop()
+            
         except:
+            self.START.setText('Start')
+            self.isRunServer = False
+            self.timer.stop()
+            self.lockTargetYn('N')
             traceback.print_exc()
-            self.inputTableRow(['ERROR', ' ', ' Msg Type error'])
+        
 
-
-    def addInt(self):
-        msg = self.msgArea.toPlainText()
-        if msg == '':
-            return
-        try:
-                msgTemp = {}
-                msgTemp['MSG_TY'] = 'INT'
-                msgTemp['VALUE'] = msg
-
-                self.sendMsg.append(msgTemp)
-                self.msgList.append(msg)
-                self.msgArea.clear()
-        except:
-            traceback.print_exc()
-            self.inputTableRow(['ERROR', ' ', ' Msg Type error'])
-
-    def addShort(self):
-        msg = self.msgArea.toPlainText()
-        if msg == '':
-            return
-        try:
-            msgTemp = {}
-            msgTemp['MSG_TY'] = 'SHORT'
-            msgTemp['VALUE'] = msg
-
-            self.sendMsg.append(msgTemp)
-            self.msgList.append(msg)
-            self.msgArea.clear()
-        except:
-            traceback.print_exc()
-            self.inputTableRow(['ERROR', ' ', ' Msg Type error'])
-
-    def addByte(self):
-        msg = self.msgArea.toPlainText()
-        if msg == '':
-            return
-        try:
-            msgTemp = {}
-            msgTemp['MSG_TY'] = 'BYTE'
-            msgTemp['VALUE'] = int(msg)
-
-            self.sendMsg.append(msgTemp)
-            self.msgList.append(msg)
-            self.msgArea.clear()
-        except:
-            msgTemp = {}
-            msgTemp['MSG_TY'] = 'BYTE'
-            msgTemp['VALUE'] = msg
-
-            self.sendMsg.append(msgTemp)
-            self.msgList.append(msg)
-            self.msgArea.clear()
-            #traceback.print_exc()
-            #self.inputTableRow(['ERROR', ' ', ' Msg Type error'])
-
-    def addDouble(self):
-        msg = self.msgArea.toPlainText()
-        if msg == '':
-            return
-        try:
-            msgTemp = {}
-            msgTemp['MSG_TY'] = 'DOUBLE'
-            msgTemp['VALUE'] = msg
-
-            self.sendMsg.append(msgTemp)
-            self.msgList.append(msg)
-            self.msgArea.clear()
-        except:
-            traceback.print_exc()
-            self.inputTableRow(['ERROR', ' ', ' Msg Type error'])
-
-    def addJson(self):
-        msg = self.msgArea.toPlainText()
-        if msg == '':
-            return
-        try:
-            jsonDataList = json.loads(msg)
-            for i in range(0, len(jsonDataList)):
-                msgObj = {'MSG_TY': jsonDataList[i]['MSG_TY'], 'VALUE': jsonDataList[i]['VALUE'],
-                          'VAL_LEN': jsonDataList[i]['VAL_LEN']}
-                self.msgList.append(str(jsonDataList[i]['VALUE']))
-                self.sendMsg.append(msgObj)
-        except:
-            traceback.print_exc()
-            self.inputTableRow(['ERROR', ' ', ' Msg Type error'])
-
-    def decodeYnMethod(self):
-
-        if self.decodeYn.isChecked():
-            self.readHeader.setChecked(False)
-            # self.headerCombo.currentText()
-
-    def reloadMsg(self):
-        print('준비중')
-        # self.msgDecoder.resetMsgList()
-
-
-    def deleteMsg(self): # 저장 메시지 삭제
-        alias = self.msgSavedList.currentText()
-        if alias == '-':
-            return
-
-        self.msgDecoder.deleteSaveMsg(alias)
-        newList = self.msgDecoder.comboSaveMsg
-        self.msgSavedList.clear()
-        self.msgSavedList.addItem('-')
-        for i in self.msgDecoder.comboSaveMsg:
-            self.msgSavedList.addItem(i)
-
-
-    def onChangeSaveMsgCombo(self):
-
-        if self.msgSavedList.currentText() == '-':
-            return
-
-        alias = self.msgSavedList.currentText()
-        self.aliaisText.setText(alias)
-
-        try:
-            msg = self.msgDecoder.getSaveData(alias)
-            self.msgArea.clear()
-            self.msgArea.append(msg)
-        except:
-            traceback.print_exc()
-
-
-
-    def saveMsgMethod(self):
-        print('click!!!!!')
-        alias = self.aliaisText.text()
-        msg = self.msgArea.toPlainText()
-        if alias == '':
-            return
-        elif msg == '':
-            return
-        saveMsg = {
-            "ALIAS": alias,
-            "MSG" : msg
-        }
-
-        newCombo = self.msgDecoder.saveMsg(saveMsg)
-
-        self.msgSavedList.clear()
-        self.msgSavedList.addItem('-')
-        for i in newCombo:
-            self.msgSavedList.addItem(i)
-
-
-
-
-    def formatChange(self):
-        print()
-        # if self.readFormat.isChecked():
-        #     print('2222')
-        #     self.readHeader.setChecked(False)
-        #
-        # elif self.readHeader.isChecked():
-        #     self.readFormat.setChecked(False)
-
-    def readLoggerFile(self):
-        print('chekc')
-        roofYn = False
-        if self.loggerReadYn.isChecked():
-            roofYn = True
-            with open("./logs/appslog.log", "r") as f:
-                while roofYn:
-                    where = f.tell()
-                    line = f.readline().strip()
-                    if not line:
-                        sleep(4)
-                        delay_time += 1
-                        f.seek(where)
-                        # if delay_time > 30.0:  # 30초 이상 지연되면 파일 출력이 끝난 것으로 간주
-                        #     print("check")
-                        #     break
-                        # print('대기중')
-                    else:
-                        delay_time = 0.  # reset delay time
-                        print(type(line))
-                        print(line)
-                        # self.loggerArea.append(str(line))
-        else:
-            roofYn = False
-
-    def autoSendSecMethod(self):
-        print(self.autoSendSec.value())
-
-    def nullCheckBoxMethod(self):
-        print('asdassd')
-
-    def cleanRevMsgMethod(self):
-        self.reciveMsgArea.clear()
-    def cleanSendMsgMethod(self):
-        self.sendMsgArea.clear()
-
-
-    def textChange(self):
-        msgLeng = str(len(self.msgArea.toPlainText()))
-        #self.len_label.setText('Msg Length({})'.format(msgLeng))
-
-    def chkItemClicked(self):
-        pass
-
-    def chkItemDoubleClicked(self):
-        pass
-
-    def chkCurrentItemChanged(self):
-        pass
-
-    def cleanMsgMethod(self):
-        self.rowCount = 0
-        self.table.clearContents()
-
-
-    def cleanMsgMethod2(self):
-        self.msgList.clear()
-        self.sendMsg.clear()
 
     def setComboMethod(self): # 콤보 세팅
-
-        self.qtMsgList.addItem('-')
-        for i in self.msgIdList:
-            self.qtMsgList.addItem(i)
-
         for i in typeCombo:
-            self.typeCombo.addItem(i)
-        for i in scCombo:
-            self.scCombo.addItem(i)
-        # for i in msgTyCombo:
-        #     self.msgTyCombo.addItem(i)
-
-        for i in headerList:
-            self.headerCombo.addItem(i)
-
-        self.msgSavedList.addItem('-')
-        for i in self.msgDecoder.comboSaveMsg:
-            self.msgSavedList.addItem(i)
-
-
-    def changeMsgListCombo(self):
-
-        if self.qtMsgList.currentText() != '-' :
-            self.msgArea.clear()
-            msgId = self.qtMsgList.currentText()
-            form = self.msgDecoder.makeForm( msgId)
-            self.msgArea.append(json.dumps(form, indent=1))
-
-    def comboBoxMethod(self):
-        if self.msgTyCombo.currentText() == 'file':
-
-            if self.typeCombo.currentText() == 'REST':
-                try:
-                    fileInfo = QFileDialog.getOpenFileName(self, 'test', './')
-                    device = str(fileInfo[0]).split('/')
-                    fileName = device[len(device)-1]
-                    fileType = fileName.split('.')[1]
-
-                    temp = multipartForm
-                    temp['HEADER']['Content-Type'] = 'multipart/form-data;'
-                    temp['FILE']['fileNm'] = fileName
-
-                    self.fileObj['fileNm'] = fileName
-                    self.fileObj['file'] = fileInfo[0]
-
-
-                    self.msgArea.clear()
-                    #self.msgArea.append(self.methodUtils.jsonFormat(temp))
-
-                    if fileInfo[0]:
-                        realFile = open(fileInfo[0], 'rb')  # 바이너리로 읽음
-
-                except:
-                    traceback.print_exc()
-
-
-        elif self.qtMsgList.currentText() != '-' :
-            self.msgArea.clear()
-            msgId = self.qtMsgList.currentText()
-            form = self.msgDecoder.makeForm( msgId)
-            self.msgArea.append(json.dumps(form, indent=1))
-
-
-        else:
-            if self.typeCombo.currentText() == 'REST':
-                self.msgArea.clear()
-                # self.msgArea.append(self.methodUtils.jsonFormat(defaultForm))
+            self.TYPES.addItem(i)
 
 
 
+    def fnKeepalive(self):
+        
+        msgEncoded = '002099990010____00__'
+        msg = bytearray(msgEncoded, 'utf-8')
 
-    def hdComboBoxMethod(self):
-        self.msgArea.clear()
-        self.msgList.clear()
-        self.sendMsg.clear()
+        serverTemp = []
+        for item in self.socketList:
+            if item['SK_TYPE'] == 'SERVER':
+                serverTemp.append(item['SK_INFO'])
 
-        # if self.headerList.currentText() == 'H6':
-        #     self.msgArea.append(self.methodUtils.jsonFormat(h6Form))
+        for item in serverTemp:
+            print('SEND KEEP ALIVE')
+            item.sendToClientAll(msg)
 
-    def onchangeScType(self):
-
-        if self.scCombo.currentText() == 'CLIENT':
-            self.bindBt.setText('Connect')
-        else:
-            self.bindBt.setText('Bind')
-
-    def onchangeType(self):
-        self.msgArea.clear()
-        self.msgList.clear()
-        self.sendMsg.clear()
-
-        if self.typeCombo.currentText() == 'REST':
-            # self.msgArea.append(self.methodUtils.jsonFormat(defaultForm))
-            self.ip_label.setText('Url')
-        elif self.typeCombo.currentText() == 'REST(GET)':
-            # self.msgArea.append(self.methodUtils.jsonFormat(defaultForm))
-            self.ip_label.setText('Url')
-        else:
-            self.ip_label.setText('Ip')
+        #self.inputTableRow(['OUT', '{}:{}'.format(self.ipInput.text(), self.portInput.text()), str(self.sendMsg)])
+        # self.sk.sendMsg(bytes(msgEncoded))
 
 
-    # 인도 H6 포맷
-    def makeH6Form(self,jsonString):
-
-        datas = json.loads(jsonString)
-
-        print(datas)
-
-        msgTemp1 = {'msgTy': 'int', 'msg': datas['TOTAL_LENGTH']}
-        msgTemp2 = {'msgTy': 'byte', 'msg': datas['HD_ID']}
-        msgTemp3 = {'msgTy': 'int', 'msg': datas['DATA_TOTAL_LENGTH']}
-        msgTemp4 = {'msgTy': 'short', 'msg': datas['DATA_CNT']}
-        msgTemp5 = {'msgTy': 'string', 'msg': datas['REV']}
-        msgTemp6 = {'msgTy': 'string', 'msg': datas['SPARE']}
-        #msgTemp7 = {'msgTy': 'string', 'msg': datas['DATA']}
-
-
-
-
-
-        # if self.removeChkBox.isChecked():
-        #     self.msgArea.clear()
-
-        self.sendMsg.append(msgTemp1)
-        self.msgList.append(msgTemp1['msg'])
-        self.sendMsg.append(msgTemp2)
-        self.msgList.append(msgTemp2['msg'])
-        self.sendMsg.append(msgTemp3)
-        self.msgList.append(msgTemp3['msg'])
-        self.sendMsg.append(msgTemp4)
-        self.msgList.append(msgTemp4['msg'])
-        self.sendMsg.append(msgTemp5)
-        self.msgList.append(msgTemp5['msg'])
-        self.sendMsg.append(msgTemp6)
-        self.msgList.append(msgTemp6['msg'])
-        jsonDataList = datas['DATA']
-        print(jsonDataList)
-        for i in range(0, len(jsonDataList)):
-            msgObj = {'msgTy': jsonDataList[i]['msgTy'], 'msg': jsonDataList[i]['val']}
-            self.msgList.append(jsonDataList[i]['val'])
-            self.sendMsg.append(msgObj)
-
-        # self.sendMsg.append(msgTemp7)
-        # self.msgList.append(msgTemp7['msg'])
 
 
     def msgAddBtMethod(self):
@@ -545,7 +209,6 @@ class InitWindow(QMainWindow, form_class):
         if msg == '':
             return
         try:
-
 
             if msgTy == 'JSON':
                 jsonDataList = json.loads(msg)
@@ -796,66 +459,6 @@ class InitWindow(QMainWindow, form_class):
 
 
 
-    # 받은 메시지를 json 포맷 바탕으로 재구성하여 노출
-    def parsingReciveData(self, msgBytes, ipPort):
-
-
-        try:
-            jsonDataList = json.loads(self.msgArea.toPlainText())
-            parsed_data = {}
-            index = 0
-            result = []
-
-            print('바이트 길이')
-            print(len(msgBytes))
-            for i in range(0, len(jsonDataList)):
-                msg_type = jsonDataList[i]["MSG_TY"]
-                value = jsonDataList[i]["VALUE"]
-                length = int(jsonDataList[i]["VAL_LEN"])
-
-                print(length)
-                if msg_type == "INT":
-                    sub_array = msgBytes[index:index + 4]  # 맨 앞 4바이트만 자르기
-                    value = int.from_bytes(sub_array, byteorder='big')
-                    # parsed_data[msg_type + str(i)] = value
-                    result.append(value)
-                    index += 4
-
-                elif msg_type == "BYTE":
-                    size = length
-                    sub_array = msgBytes[index:index + size]
-                    #value = int.from_bytes(sub_array, byteorder='big')
-                    result.append(str(''.join(chr(byte) for byte in sub_array)))
-                    index += size
-
-                elif msg_type == "SHORT":
-                    sub_array = msgBytes[index:index + 2]  # 맨 앞 4바이트만 자르기
-                    value = int.from_bytes(sub_array, byteorder='big', signed=True)
-                    # parsed_data[msg_type + str(i)] = value
-                    result.append(value)
-                    index += 2
-
-                elif msg_type == "STRING":
-                    size = length
-                    # parsed_data[msg_type+str(i)] = msgBytes[index:index + size].decode('utf-8').strip()
-                    result.append(msgBytes[index:index + size].decode('utf-8-sig').strip())
-                    index += size
-
-                elif msg_type == "DOUBLE":
-                    print(index, index + 8)
-                    # size = int(value)
-                    # parsed_data[msg_type+str(i)] = struct.unpack('!d', msgBytes[index:index + 8])[0]
-                    result.append(struct.unpack('!d', msgBytes[index:index + 8])[0])
-                    index += 8
-
-
-            logger.info('RECIVE JSON BYTE:' + str(result))
-            self.inputTableRow(['IN', ipPort, str(result)])
-        except:
-            traceback.print_exc()
-            logger.info('RECIVE MSG JSON FORMAT ERROR !!!')
-
-
 
     def bindBtMethod(self):
         ip = self.ipInput.text()
@@ -972,30 +575,27 @@ class InitWindow(QMainWindow, form_class):
                 #self.inputTableRow(['ERROR', '{}:{}'.format(self.ipInput.text(), self.portInput.text()) , 'Bind Error'])
 
 
-
-
-
     def lockTargetYn(self, Yn):
         if Yn == 'Y':
-            self.ipInput.setReadOnly(True)
-            self.ipInput.setStyleSheet("background:gray;")
-            self.portInput.setReadOnly(True)
-            self.typeCombo.setEnabled(False)
-            self.scCombo.setEnabled(False)
-            self.portInput.setStyleSheet("background:gray;")
+            self.IP.setReadOnly(True)
+            self.PORT.setReadOnly(True)
+            self.TYPES.setEnabled(False)
+
+            self.KEEPALIVE.setReadOnly(True)
+            self.MINANG.setReadOnly(True)
+            self.MAXANG.setReadOnly(True)
+            self.MINTOR.setReadOnly(True)
+            self.MAXTOR.setReadOnly(True)
         else:
-            self.typeCombo.setEnabled(True)
-            self.scCombo.setEnabled(True)
-            self.ipInput.setReadOnly(False)
-            self.ipInput.setStyleSheet( "background:rgb(122, 122, 122);""color:white;")
-            self.portInput.setReadOnly(False)
-            self.portInput.setStyleSheet("background:rgb(122, 122, 122);""color:white;")
+            self.IP.setReadOnly(False)
+            self.PORT.setReadOnly(False)
+            self.TYPES.setEnabled(True)
+            self.KEEPALIVE.setReadOnly(False)
+            self.MINANG.setReadOnly(False)
+            self.MAXANG.setReadOnly(False)
+            self.MINTOR.setReadOnly(False)
+            self.MAXTOR.setReadOnly(False)
 
-
-
-    def inputSendMsgArea(self, test):
-        now = datetime.now()
-        self.sendMsgArea.append('[ {} ]  {}'.format(now.strftime('%H:%M:%S'), test))
 
     @pyqtSlot(bytearray)  # 클라이언트 커넥션 후 메시지 invoke 함수
     def reciveData(self, msgBytes):
@@ -1041,21 +641,24 @@ class InitWindow(QMainWindow, form_class):
     @pyqtSlot(bytearray, str)
     def serverReciveDataMethod(self, msgBytes, ipPort):
 
+
+        self.LOG.append('test')
+
         # 해더 기준으로
-        if self.decodeYn.isChecked():
-            result = self.msgDecoder.decodeByHeader(msgBytes, self.headerCombo.currentText())
-            logger.info('RECIVE FROM CLIENT BYTE:' + str(result))
-            self.inputTableRow(['IN', ipPort, str(result)])
+        # if self.decodeYn.isChecked():
+        #     result = self.msgDecoder.decodeByHeader(msgBytes, self.headerCombo.currentText())
+        #     logger.info('RECIVE FROM CLIENT BYTE:' + str(result))
+        #     self.inputTableRow(['IN', ipPort, str(result)])
 
-            return
+        #     return
 
-        if self.readHeader.isChecked():
-            print('포멧팅')
-            self.parsingReciveData(msgBytes, ipPort)
-        else:
+        # if self.readHeader.isChecked():
+        #     print('포멧팅')
+        #     self.parsingReciveData(msgBytes, ipPort)
+        # else:
 
-            logger.info('RECIVE FROM CLIENT BYTE:' + str(''.join(chr(byte) for byte in msgBytes)))
-            self.inputTableRow(['IN', ipPort, str(''.join(chr(byte) for byte in msgBytes))])
+        #     logger.info('RECIVE FROM CLIENT BYTE:' + str(''.join(chr(byte) for byte in msgBytes)))
+        #     self.inputTableRow(['IN', ipPort, str(''.join(chr(byte) for byte in msgBytes))])
 
     @pyqtSlot(str, str)
     def serverStatLogMethod(self, revicevLog, ipPort):
@@ -1077,40 +680,3 @@ class InitWindow(QMainWindow, form_class):
         now = datetime.now()
         self.inputTableRow(['ERROR', ipPort, revicevLog])
 
-
-
-    def inputTableRow(self,arr):
-        #  파라미터 :: ['OUT','MSG']
-        now = datetime.now()
-        now.strftime('%H:%M:%S')
-
-        self.table.setRowCount(self.rowCount + 1)
-
-        # item = QTableWidgetItem(arr[0])
-        bg_color = QColor(204, 229, 255)  # 빨간색 배경색
-
-        if arr[0] == 'IN':
-            item = QTableWidgetItem(now.strftime('%H:%M:%S'))
-            item.setBackground(bg_color)
-            self.table.setItem(self.rowCount, 0, item)
-
-            item2 = QTableWidgetItem(arr[2])
-            item2.setBackground(bg_color)
-            self.table.setItem(self.rowCount, 1, item2)
-
-        else:
-            self.table.setItem(self.rowCount, 0, QTableWidgetItem(now.strftime('%H:%M:%S')))
-            self.table.setItem(self.rowCount, 1, QTableWidgetItem(arr[2]))
-
-
-
-
-
-        # self.table.setItem(self.rowCount, 0, QTableWidgetItem(now.strftime('%H:%M:%S')))
-        # self.table.setItem(self.rowCount, 1, item)  # 로그타입
-        # self.table.setItem(self.rowCount, 2, QTableWidgetItem(arr[1])) # target
-        # self.table.setItem(self.rowCount, 3, QTableWidgetItem(arr[2]))  # 메시지
-
-        self.table.scrollToBottom()
-
-        self.rowCount = self.rowCount+1

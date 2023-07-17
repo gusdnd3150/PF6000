@@ -58,8 +58,8 @@ class SocketServer(QThread, QObject):
 
 
     def initServer(self):
-        # print('run Thread :: ip={}, port={}, type={}, scType={}'.format(self.ip, self.port, self.type, self.scType))
-        logger.info('Server thread start ip={}, port={}, type={}, scType={}'.format(self.ip, self.port, self.type, self.scType))
+        print('run Thread :: ip={}, port={}, type={}, scType={}'.format(self.ip, self.port, self.type, self.scType))
+        #logger.info('Server thread start ip={}, port={}, type={}, scType={}'.format(self.ip, self.port, self.type, self.scType))
         try:
             tempClient = {}
             if self.type == 'TCP':
@@ -91,9 +91,8 @@ class SocketServer(QThread, QObject):
 
                 except:
                     traceback.print_exc()
-                    logger.info('Close Server ', '{}:{}'.format(self.ip, str(self.port)))
 
-                    self.serverErrorLog('Close Server ', '{}:{}'.format(self.ip, str(self.port)))
+                    #self.serverErrorLog('Close Server ', '{}:{}'.format(self.ip, str(self.port)))
 
             elif self.type == 'UDP':
                 print('preparing')
@@ -101,7 +100,7 @@ class SocketServer(QThread, QObject):
         except:
             print('222222222222')
             traceback.print_exc()
-            self.serverErrorLog(traceback.format_exc(), '{}:{}'.format(self.ip, str(self.port)))
+            #self.serverErrorLog(traceback.format_exc(), '{}:{}'.format(self.ip, str(self.port)))
 
 
     def serverReviceMsgMethod(self, msg, ipPort):
@@ -118,8 +117,8 @@ class SocketServer(QThread, QObject):
     def handle_client(self, conn, addr):
         tempClient = {}
         with conn:
-            self.serverStatLog('Connected',  '{}:{}'.format(addr[0], str(addr[1])))
-            logger.info('New Client Connected',  '{}:{}'.format(addr[0], str(addr[1])))
+            #self.serverStatLog('Connected',  '{}:{}'.format(addr[0], str(addr[1])))
+            #logger.info('New Client Connected',  '{}:{}'.format(addr[0], str(addr[1])))
             while self.isRun:
                 try:
                     # 데이터가 수신되면 클라이언트에 다시 전송합니다.(에코)
@@ -131,7 +130,6 @@ class SocketServer(QThread, QObject):
                     print(type(data))
 
                     byte_array = bytearray(data)
-                    # self.serverReviceMsgMethod(str(data),  '{}:{}'.format(addr[0], str(addr[1])))
                     self.serverReviceMsgMethod(byte_array, '{}:{}'.format(addr[0], str(addr[1])))
                 except:
                     conn.close()
@@ -164,9 +162,9 @@ class SocketServer(QThread, QObject):
             #if index != 0:  # 0 인덱스는 자기 자신의 주소값이기 때문에 건너뜀
                 if self.client_Obj_list[index]._closed == False:
                     self.client_Obj_list[index].send(msg)
-                    print(self.client_Obj_list[index].getpeername())
+                    #print(self.client_Obj_list[index].getpeername())
                     ip, port = self.client_Obj_list[index].getpeername()
-                    self.serverSendData.emit(str(''.join(chr(byte) for byte in msg)), ip+":"+str(port))
+                    #self.serverSendData.emit(str(''.join(chr(byte) for byte in msg)), ip+":"+str(port))
 
 
 
