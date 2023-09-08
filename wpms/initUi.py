@@ -50,9 +50,7 @@ class InitWindow(QMainWindow, form_class):
     reciveMsg = ''
     socketList = []
     methodUtils = None
-
     timer = None
-
     isRunClient = False
     isRunServer = False
     msgDecoder = None
@@ -64,7 +62,7 @@ class InitWindow(QMainWindow, form_class):
         self.setWindowIcon(QIcon(resource_path('icon.ico')))
         self.setFixedSize(width, height)
         self.initUI()
-        self.setWindowTitle("PF6000 테스터")
+        self.setWindowTitle("[아틀라스 콥코] PF6000 테스터")
         self.show()
 
 
@@ -73,6 +71,7 @@ class InitWindow(QMainWindow, form_class):
 
     
         self.START.clicked.connect((self.uiStart))
+        #self.btnByte.clicked.connect(self.addByte)  # 전송 버튼
         self.setComboMethod()
         #         # Button/chk box등 기능 연결
         # self.pingBt.clicked.connect((self.pingBtMethod))
@@ -629,20 +628,32 @@ class InitWindow(QMainWindow, form_class):
         # self.reciveMsgArea.append('[ {} ]  {}'.format(now.strftime('%H:%M:%S'), test))
 
 
-    def sendPf6000Msg(self,mid,bytes):
+    def sendPf6000Msg(self,mid):
 
         if(mid=='0061'):
             print('최신작업결과 송신')
             # 슬레쉬 기준으로 각 데이터 파싱 필요
             #             0            1    2       3     4   5 ...
-            msg0061 = '023100610010/010000/0200/030000000/04/0500/06000/070000/080000/091/101/111/12000000/13000000/14000000/15000000/1600000/1700000/1800000/1900000/202023-09-06:08:34:21/210000-00-00:00:00:00/222/230000004346'
+            msg0061 = '023100610010        /010000/0200/030000000                  /04                         /0500/06000/070000/080000/091/101/111/12000000/13000000/14000000/15000000/1600000/1700000/1800000/1900000/202023-09-06:08:34:21/210000-00-00:00:00:00/222/230000004346'
+
             # 0:해더영역,  1:cellId , 2:channelId , 3: 컨트롤러이름
+            # 4: vin_no  5: Job Id , 6:param  ,   7: 배치 사이즈
+            # 8: 배치 카운터  9: 체결 상태   , 10: 토크 상태 ,  11: 앵글 상태 
             temp = msg0061.split('/')
 
+            result_string = "".join(temp)
 
+            print(result_string)
+            msgByte = bytearray(result_string, 'utf-8')
 
+            print(len(msgByte))
+            self.sendMsgForAllClient(msgByte)
+            
         elif(mid=='0000'):
             print('')
+
+
+
     @pyqtSlot(bytearray, str)
     def serverReciveDataMethod(self, msgBytes, ipPort):
 
@@ -659,8 +670,11 @@ class InitWindow(QMainWindow, form_class):
             msg = bytearray(msgEncoded, 'utf-8')
             self.sendMsgForAllClient(msg)
 
+            self.sendPf6000Msg('0061')
+
         elif(strMid == '0062'): # 작업결과 송신응답
             print('request MID ::'+strMid)
+            print('request body ::' + msgBytes)
 
         elif (strMid == '0064'):  # 특정 작업결과 요청  리턴: 0065
             print('request MID ::' + strMid)
