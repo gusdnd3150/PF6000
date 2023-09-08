@@ -117,11 +117,7 @@ class InitWindow(QMainWindow, form_class):
         port = self.PORT.text()
         flag = self.START.text().upper()
         protocol = self.TYPES.currentText()
-        toolSk = None
         skInfo = {}
-
-        keepSec = int(self.KEEPALIVE.value()) * 1000
-        
 
         try:
             if flag == 'START':
@@ -141,8 +137,9 @@ class InitWindow(QMainWindow, form_class):
                     self.isRunServer = True
                     self.lockTargetYn('Y')
                     self.timer = QTimer()
+                    self.timer.start(2000)
                     self.timer.timeout.connect(self.fnKeepalive)  # 스케줄링할 작업을 연결합니다
-                    self.timer.start(keepSec)
+
                    
                 elif protocol =='UDP':
                     toolSk = SocketUDPServer(ip, port, protocol, flag)
@@ -154,8 +151,9 @@ class InitWindow(QMainWindow, form_class):
                     self.isRunServer = True
                     self.lockTargetYn('Y')
                     self.timer = QTimer()
+                    self.timer.setInterval(2000)
                     self.timer.timeout.connect(self.fnKeepalive)  # 스케줄링할 작업을 연결합니다
-                    self.timer.start(keepSec)
+                    self.timer.start(0)
 
 
 
@@ -183,25 +181,18 @@ class InitWindow(QMainWindow, form_class):
 
 
 
+    # 킵어라이브 송신
     def fnKeepalive(self):
-        
-        msgEncoded = '002099990010____00__'
+        msgEncoded = '00209999001000000000'
         msg = bytearray(msgEncoded, 'utf-8')
+        self.sendMsgForAllClient(msg)
 
-        serverTemp = []
+
+    def sendMsgForAllClient(self, msgBytes):
+        msgBytes.append(0x00) # 딜리미터 추가
         for item in self.socketList:
             if item['SK_TYPE'] == 'SERVER':
-                serverTemp.append(item['SK_INFO'])
-
-        for item in serverTemp:
-            print('SEND KEEP ALIVE')
-            item.sendToClientAll(msg)
-
-        #self.inputTableRow(['OUT', '{}:{}'.format(self.ipInput.text(), self.portInput.text()), str(self.sendMsg)])
-        # self.sk.sendMsg(bytes(msgEncoded))
-
-
-
+                item['SK_INFO'].sendToClientAll(msgBytes)
 
     def msgAddBtMethod(self):
         msgTy = self.msgTyCombo.currentText()
@@ -638,27 +629,57 @@ class InitWindow(QMainWindow, form_class):
         # self.reciveMsgArea.append('[ {} ]  {}'.format(now.strftime('%H:%M:%S'), test))
 
 
+    def sendPf6000Msg(self,mid,bytes):
+
+        if(mid=='0061'):
+            print('최신작업결과 송신')
+            # 슬레쉬 기준으로 각 데이터 파싱 필요
+            #             0            1    2       3     4   5 ...
+            msg0061 = '023100610010/010000/0200/030000000/04/0500/06000/070000/080000/091/101/111/12000000/13000000/14000000/15000000/1600000/1700000/1800000/1900000/202023-09-06:08:34:21/210000-00-00:00:00:00/222/230000004346'
+            # 0:해더영역,  1:cellId , 2:channelId , 3: 컨트롤러이름
+            temp = msg0061.split('/')
+
+
+
+        elif(mid=='0000'):
+            print('')
     @pyqtSlot(bytearray, str)
     def serverReciveDataMethod(self, msgBytes, ipPort):
 
+        start_index = 4
+        length = 4
+        midBytes = msgBytes[start_index:start_index + length]
+        byte_data = bytes(midBytes)
+        strMid = byte_data.decode('utf-8') # MID 추출
 
-        self.LOG.append('test')
+        self.LOG.append(strMid)
+        if(strMid == '0060'): # 마지막 작업결과 구독 요청   리턴: 0005 + mid 0060
+            print('request MID ::'+strMid)
+            msgEncoded = '002400050010000000000060'
+            msg = bytearray(msgEncoded, 'utf-8')
+            self.sendMsgForAllClient(msg)
 
-        # 해더 기준으로
-        # if self.decodeYn.isChecked():
-        #     result = self.msgDecoder.decodeByHeader(msgBytes, self.headerCombo.currentText())
-        #     logger.info('RECIVE FROM CLIENT BYTE:' + str(result))
-        #     self.inputTableRow(['IN', ipPort, str(result)])
+        elif(strMid == '0062'): # 작업결과 송신응답
+            print('request MID ::'+strMid)
 
-        #     return
+        elif (strMid == '0064'):  # 특정 작업결과 요청  리턴: 0065
+            print('request MID ::' + strMid)
 
-        # if self.readHeader.isChecked():
-        #     print('포멧팅')
-        #     self.parsingReciveData(msgBytes, ipPort)
-        # else:
+        elif (strMid == '0001'):  # 통신시작 응답   리턴: 0002
+            print('request MID ::' + strMid)
+            msgEncoded = '00200002000000000000'
+            msg = bytearray(msgEncoded, 'utf-8')
+            self.sendMsgForAllClient(msg)
 
-        #     logger.info('RECIVE FROM CLIENT BYTE:' + str(''.join(chr(byte) for byte in msgBytes)))
-        #     self.inputTableRow(['IN', ipPort, str(''.join(chr(byte) for byte in msgBytes))])
+        elif (strMid == '0080'):  # 시간 동기화 리턴:0005 + mid
+            print('request MID ::' + strMid)
+
+        elif (strMid == '0082'):  # 시간 동기화 리턴:0005 + mid
+            print('request MID ::' + strMid)
+
+        elif (strMid == '9999'):  # 킵어라이브 수신   리턴:
+            print('request MID ::' + strMid)
+
 
     @pyqtSlot(str, str)
     def serverStatLogMethod(self, revicevLog, ipPort):

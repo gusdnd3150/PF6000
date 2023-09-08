@@ -84,6 +84,7 @@ class SocketServer(QThread, QObject):
                                 newClient, addr = server.accept()
 
                                 self.client_Obj_list.append(newClient)
+
                                 t = threading.Thread(target=self.handle_client, args=(newClient, addr))
                                 t.start()
                         for error in excpetions:
@@ -125,10 +126,6 @@ class SocketServer(QThread, QObject):
                     data = conn.recv(1024)
                     if not data:
                         break
-
-                    print('받은 데이터 타입')
-                    print(type(data))
-
                     byte_array = bytearray(data)
                     self.serverReviceMsgMethod(byte_array, '{}:{}'.format(addr[0], str(addr[1])))
                 except:
@@ -155,16 +152,18 @@ class SocketServer(QThread, QObject):
 
     def sendToClientAll(self, msg):
 
-        print(len(self.client_Obj_list))
-        print(self.client_Obj_list)
-
-        for index in range(0, len(self.client_Obj_list)):
-            #if index != 0:  # 0 인덱스는 자기 자신의 주소값이기 때문에 건너뜀
+        try:
+            #print(len(self.client_Obj_list))
+            #print(self.client_Obj_list)
+            for index in range(0, len(self.client_Obj_list)):
+                # if index != 0:  # 0 인덱스는 자기 자신의 주소값이기 때문에 건너뜀
                 if self.client_Obj_list[index]._closed == False:
                     self.client_Obj_list[index].send(msg)
-                    #print(self.client_Obj_list[index].getpeername())
+                    # print(self.client_Obj_list[index].getpeername())
                     ip, port = self.client_Obj_list[index].getpeername()
-                    #self.serverSendData.emit(str(''.join(chr(byte) for byte in msg)), ip+":"+str(port))
+                    # self.serverSendData.emit(str(''.join(chr(byte) for byte in msg)), ip+":"+str(port))
+        except:
+            traceback.print_exc()
 
 
 
