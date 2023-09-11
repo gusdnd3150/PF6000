@@ -73,6 +73,7 @@ class InitWindow(QMainWindow, form_class):
         self.START.clicked.connect((self.uiStart))
         #self.btnByte.clicked.connect(self.addByte)  # 전송 버튼
         self.setComboMethod()
+        self.RESULTSEND.clicked.connect((self.sendRslt))
         #         # Button/chk box등 기능 연결
         # self.pingBt.clicked.connect((self.pingBtMethod))
         # self.bindBt.clicked.connect((self.bindBtMethod))
@@ -218,6 +219,23 @@ class InitWindow(QMainWindow, form_class):
             self.inputTableRow(['ERROR', ' ',' Msg Type error'])
 
 
+
+    # 체결결과 송신
+    def sendRslt(self, bytes):
+        if(self.isRunServer == False):
+            return
+
+        curBody = self.BODY.text()
+        curJob = self.JOB.text()
+        print('CURRENT  :: ' + curBody +'///'+ curJob)
+        self.sendPf6000Msg('0061')
+
+        if(curBody == ''):
+            return
+        elif(curJob == ''):
+            return
+
+
     def converForSend(self, msgTy, msg):
         temp = []
         print('msg::' + msg)
@@ -359,210 +377,7 @@ class InitWindow(QMainWindow, form_class):
         except:
             logger.info('PARSING MSG JSON FORMAT ERROR !!!')
 
-    def sendBtMethod(self):
-        # msgEncoded = []
-        msgEncoded = bytearray()
-        msg = []
-        try:
-            # HTTP 통신일 경우========================
-            if self.typeCombo.currentText() == 'REST':
-                temp = json.loads(self.msgList.toPlainText())
-                if temp['METHOD'] == 'POST':
 
-                    if temp['HEADER']['Content-Type'] == 'multipart/form-data;':
-                        # response = self.methodUtils.requestPostMultiPartForm(self.msgList.toPlainText(), self.ipInput.text(), self.fileObj)
-                        # self.inputTableRow(['RESPONSE', self.ipInput.text(), response])
-                        return
-                    else:
-                        # response = self.methodUtils.requestPost(self.msgList.toPlainText(), self.ipInput.text())
-                        # self.inputTableRow(['RESPONSE', self.ipInput.text(), response])
-                        return
-                elif temp['METHOD'] == 'GET':
-                    # response = self.methodUtils.requestGet(self.msgList.toPlainText(), self.ipInput.text())
-                    # self.inputTableRow(['RESPONSE', self.ipInput.text(), response])
-                    return
-
-
-            # TCP 통신일 경우========================
-            if len(self.sendMsg) > 0:
-                for i in range(0, len(self.sendMsg)):
-                    indexItem = self.sendMsg[i]
-                    msg.append(indexItem['VALUE'])
-                    temp = self.converForSend22(indexItem['MSG_TY'], indexItem['VALUE'])
-
-                    msgEncoded.extend(temp)
-                    print('msgEncoded', msgEncoded)
-
-
-            if len(msgEncoded) < 0:
-                return
-
-            # 딜리미터 자동 삽입 0x00
-            if self.nullCheckBox.isChecked():
-                nullDelemeter = 0
-                msgEncoded.extend(nullDelemeter.to_bytes(1, byteorder='big'))
-
-            # 클라리언트 시 전송
-            if self.isRunClient:
-
-
-                self.sk.sendMsg(msgEncoded)
-
-                #self.inputTableRow(['OUT', '{}:{}'.format(self.ipInput.text(), self.portInput.text()), str(self.sendMsg)])
-                self.inputTableRow(['OUT', '{}:{}'.format(self.ipInput.text(), self.portInput.text()), str(''.join(chr(byte) for byte in msgEncoded))])
-
-                logger.info('SEND TO SERVER BYTE:' + str(''.join(chr(byte) for byte in msgEncoded)))
-                #self.inputTableRow(['OUT', '{}:{}'.format(self.ipInput.text(), self.portInput.text()), " ".join(map(str, msg))])
-
-
-            # 서버 바인드 시 전송
-            elif self.isRunServer:
-                serverTemp = []
-                for item in self.socketList:
-                    if item['SK_TYPE'] == 'SERVER':
-                        serverTemp.append(item['SK_INFO'])
-
-                for item in serverTemp:
-                    print('send data')
-                    item.sendToClientAll(msgEncoded)
-
-                logger.info('SEND TO CLIENT BYTE:' + str(''.join(chr(byte) for byte in msgEncoded)))
-                #self.inputTableRow(['OUT', '{}:{}'.format(self.ipInput.text(), self.portInput.text()), str(self.sendMsg)])
-                # self.sk.sendMsg(bytes(msgEncoded))
-
-
-
-
-        except:
-            traceback.print_exc()
-            self.inputTableRow(['ERROR','{}:{}'.format(self.ipInput.text(), self.portInput.text()), traceback.format_exc()])
-            print('send exception')
-            if self.isRunClient:
-                self.inputTableRow(['ERROR', '{}:{}'.format(self.ipInput.text(), self.portInput.text()),                                    'Check the IP/PORT conection status'])
-
-            elif self.isRunServer:
-                print()
-
-        finally:
-            self.sendMsg.clear()
-            self.cleanMsgMethod2()
-
-
-
-
-    def bindBtMethod(self):
-        ip = self.ipInput.text()
-        port = self.portInput.text()
-        type = self.typeCombo.currentText()
-        scType = self.scCombo.currentText()
-        btnText  = self.bindBt.text()
-
-
-
-
-        if self.isRunClient:
-            try:
-                for i in range(0, len(self.socketList)):
-                    item = self.socketList.pop(0)
-                    item['SK_INFO'].closeSocket()
-            except:
-                traceback.print_exc()
-            finally:
-                self.isRunClient = False
-                self.bindBt.setText('Connect')
-                self.lockTargetYn('N')
-            return
-
-
-        elif self.isRunServer:
-            try:
-                for i in range(0, len(self.socketList)):
-                    item = self.socketList.pop(0)
-                    item['SK_INFO'].closeSocket()
-            except:
-                traceback.print_exc()
-            finally:
-                self.isRunServer = False
-                self.bindBt.setText('Bind')
-                self.lockTargetYn('N')
-            return
-
-
-        logger.info('ip={}, port={}, type={}, scType={}'.format(ip, port, type, scType))
-        skInfo = {}
-        self.socketList.clear()
-
-        if scType == 'CLIENT':
-            try:
-                # 소켓리스트 확인
-
-
-                # 소켓 클라이언트 인스턴스 생성
-                if type == 'UDP':
-                    self.sk = SocketUDPClient(ip, port, type, scType)
-                elif type == 'TCP':
-                    self.sk = SocketClient(ip, port, type, scType)
-
-                #self.sk = SocketClient(ip, port, type, scType)
-                # thread 시작
-                self.sk.damon = True
-                self.sk.start()
-
-                # 소켓 인스턴스 저장
-                skInfo['SK_INFO'] = self.sk
-                skInfo['SK_TYPE'] = scType
-                self.socketList.append(skInfo)
-
-                # 클라이언트 이벤트 바인딩
-                self.sk.reciveData.connect(self.reciveData)
-                self.sk.statLogMsg.connect(self.statLog)
-                self.sk.errorLogMsg.connect(self.errLog)
-                self.lockTargetYn('Y')
-
-                # running 상태 수정
-                self.isRunClient = True
-                self.bindBt.setText('Close')
-                
-            except:
-                traceback.print_exc()
-                self.socketList.clear()
-                self.lockTargetYn('N')
-                self.inputTableRow(['ERROR', '{}:{}'.format(self.ipInput.text(), self.portInput.text()) ,'Connection Error'])
-
-        elif scType == 'SERVER':
-
-            try:
-
-                if type == 'UDP':
-                    self.sk = SocketUDPServer(ip, port, type, scType)
-                elif type == 'TCP':
-                    self.sk = SocketServer(ip, port, type, scType)
-
-                # thread 시작
-                self.sk.damon = True
-                self.sk.start()
-
-                # 소켓 인스턴스 저장
-                skInfo['SK_INFO'] = self.sk
-                skInfo['SK_TYPE'] = scType
-                self.socketList.append(skInfo)
-
-                # 서버 이벤트 바인딩
-                self.sk.serverReciveData.connect(self.serverReciveDataMethod)
-                self.sk.serverStatLogMsg.connect(self.serverStatLogMethod)
-                self.sk.serverErrorLogMsg.connect(self.serverErrorLogMethod)
-                self.sk.serverSendData.connect(self.serverSendDataMethod)
-
-                self.lockTargetYn('Y')
-
-                # running 상태 수정
-                self.isRunServer = True
-                self.bindBt.setText('Close')
-
-            except:
-                traceback.print_exc()
-                self.socketList.clear()
-                #self.inputTableRow(['ERROR', '{}:{}'.format(self.ipInput.text(), self.portInput.text()) , 'Bind Error'])
 
 
     def lockTargetYn(self, Yn):
@@ -628,35 +443,69 @@ class InitWindow(QMainWindow, form_class):
         # self.reciveMsgArea.append('[ {} ]  {}'.format(now.strftime('%H:%M:%S'), test))
 
 
+
+    def rpad(self, input_string, length, padding_char):
+        # 문자열이 지정된 길이 이상인 경우 그대로 반환
+        if len(input_string) >= length:
+            return input_string
+        # 필요한 만큼 다른 문자로 채워서 반환
+        return input_string + (padding_char * (length - len(input_string)))
+
+    # 아틀라스콥코 응답 처리
     def sendPf6000Msg(self,mid):
+        try:
 
-        if(mid=='0061'):
-            print('최신작업결과 송신')
-            # 슬레쉬 기준으로 각 데이터 파싱 필요
-            #             0            1    2       3     4   5 ...
-            msg0061 = '023100610010        /010000/0200/030000000                  /04                         /0500/06000/070000/080000/091/101/111/12000000/13000000/14000000/15000000/1600000/1700000/1800000/1900000/202023-09-06:08:34:21/210000-00-00:00:00:00/222/230000004346'
+            if(mid=='0061'):
+                print('최신작업결과 송신')
+                # 슬레쉬 기준으로 각 데이터 파싱 필요
+                #             0                     1    2       3                               4                      5 ...
+                #msg0061 = '023100610010        /010000/0200/030000000                  /04                         /0500/06000/070000/080000/091/101/111/12000000/13000000/14000000/15000000/1600000/1700000/1800000/1900000/202023-09-06:08:34:21/210000-00-00:00:00:00/222/230000004346'
 
-            # 0:해더영역,  1:cellId , 2:channelId , 3: 컨트롤러이름
-            # 4: vin_no  5: Job Id , 6:param  ,   7: 배치 사이즈
-            # 8: 배치 카운터  9: 체결 상태   , 10: 토크 상태 ,  11: 앵글 상태 
-            temp = msg0061.split('/')
-
-            result_string = "".join(temp)
-
-            print(result_string)
-            msgByte = bytearray(result_string, 'utf-8')
-
-            print(len(msgByte))
-            self.sendMsgForAllClient(msgByte)
-            
-        elif(mid=='0000'):
-            print('')
+                header_0 = '023100610010        '
+                cellId_1 = '01'+self.rpad('0000', 4, ' ')
+                channelId_2 = '02'+self.rpad('00', 2, ' ')
+                ctrlName_3 = '03'+self.rpad('00000000', 25, ' ')
+                vinNo_4 = '04'+self.rpad(self.BODY.text(), 25, ' ')
+                jobId_5 = '05'+self.rpad(self.JOB.text(), 2, ' ')
+                parameterSet_6 = '06' + self.rpad('00', 2, ' ')
 
 
+                # 0:해더영역,  1:cellId , 2:channelId , 3: 컨트롤러이름
+                # 4: vin_no  5: Job Id , 6:param  ,   7: 배치 사이즈
+                # 8: 배치 카운터  9: 체결 상태   , 10: 토크 상태 ,  11: 앵글 상태
 
+                print(header_0+cellId_1+channelId_2+ctrlName_3+vinNo_4+jobId_5)
+                msgByte = bytearray(header_0+cellId_1+channelId_2+ctrlName_3+vinNo_4+jobId_5, 'utf-8')
+
+                print(len(msgByte))
+                self.sendMsgForAllClient(msgByte)
+
+            elif(mid=='0005'):
+                print('')
+                msgEncoded = '00240005001000000000' + mid
+                msg = bytearray(msgEncoded, 'utf-8')
+                self.sendMsgForAllClient(msg)
+        except:
+            traceback.print_exc()
+
+    def convertPf6000Msg(self, mid, bytes):
+
+        defaultHdLen = 20  # 해더 길이
+        reuslt = ""
+
+        if (mid == '0050'):  # 25자리 BODY_NO 파싱
+            reuslt = bytes[defaultHdLen:].decode('utf-8')
+        elif (mid == '0038'): # 2자리 JOB_ID 파싱
+            reuslt = bytes[defaultHdLen:].decode('utf-8')
+
+        return reuslt.strip()
+
+
+    #0005는 요청에대한 응답 메시지
     @pyqtSlot(bytearray, str)
     def serverReciveDataMethod(self, msgBytes, ipPort):
 
+        retunr0005 = False
         start_index = 4
         length = 4
         midBytes = msgBytes[start_index:start_index + length]
@@ -666,15 +515,11 @@ class InitWindow(QMainWindow, form_class):
         self.LOG.append(strMid)
         if(strMid == '0060'): # 마지막 작업결과 구독 요청   리턴: 0005 + mid 0060
             print('request MID ::'+strMid)
-            msgEncoded = '002400050010000000000060'
-            msg = bytearray(msgEncoded, 'utf-8')
-            self.sendMsgForAllClient(msg)
+            retunr0005 = True
 
-            self.sendPf6000Msg('0061')
-
-        elif(strMid == '0062'): # 작업결과 송신응답
+        elif(strMid == '0062'): # 작업결과 송신 응답
             print('request MID ::'+strMid)
-            print('request body ::' + msgBytes)
+            # print('request body ::' + msgBytes)
 
         elif (strMid == '0064'):  # 특정 작업결과 요청  리턴: 0065
             print('request MID ::' + strMid)
@@ -691,9 +536,33 @@ class InitWindow(QMainWindow, form_class):
         elif (strMid == '0082'):  # 시간 동기화 리턴:0005 + mid
             print('request MID ::' + strMid)
 
+        elif (strMid == '0050'):  # BODY_NO 수신
+            print('request MID ::' + strMid)
+            self.TORQUE.setValue(0.0)
+            self.ANGLE.setValue(0.0)
+            retunr0005 = True
+
+            bodyNO = self.convertPf6000Msg(strMid,msgBytes)
+            self.BODY.setText(bodyNO)
+
+        elif (strMid == '0038'):  # JOB_ID 수신
+            print('request MID ::' + strMid)
+            self.TORQUE.setValue(0.0)
+            self.ANGLE.setValue(0.0)
+            retunr0005 = True
+
+            jobId = self.convertPf6000Msg(strMid, msgBytes)
+            self.JOB.setText(jobId)
+
         elif (strMid == '9999'):  # 킵어라이브 수신   리턴:
             print('request MID ::' + strMid)
 
+
+
+        if(retunr0005):
+            msgEncoded = '00240005001000000000' + strMid
+            msg = bytearray(msgEncoded, 'utf-8')
+            self.sendMsgForAllClient(msg)
 
     @pyqtSlot(str, str)
     def serverStatLogMethod(self, revicevLog, ipPort):
