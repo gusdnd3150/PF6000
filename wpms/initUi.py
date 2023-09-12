@@ -11,6 +11,7 @@ import sys
 import os
 import traceback
 import json
+from datetime import datetime
 
 from conf.logconfig import logger
 from wpms.socketClient import SocketClient
@@ -37,8 +38,8 @@ form_class = uic.loadUiType(form)[0]
 scCombo = ['CLIENT', 'SERVER']
 typeCombo = ['TCP', 'UDP']
 
-width = 580
-height = 500
+width = 769
+height = 430
 
 
 class InitWindow(QMainWindow, form_class):
@@ -74,40 +75,10 @@ class InitWindow(QMainWindow, form_class):
         #self.btnByte.clicked.connect(self.addByte)  # 전송 버튼
         self.setComboMethod()
         self.RESULTSEND.clicked.connect((self.sendRslt))
-        #         # Button/chk box등 기능 연결
-        # self.pingBt.clicked.connect((self.pingBtMethod))
-        # self.bindBt.clicked.connect((self.bindBtMethod))
-        # # self.msgAddBt.clicked.connect((self.msgAddBtMethod))
-        # self.sendBt.clicked.connect((self.sendBtMethod))
-        # self.cleanMsgBtn.clicked.connect(self.cleanMsgMethod)
-        # self.clearBt2.clicked.connect(self.cleanMsgMethod2)
-        #
-        # self.msgReload.clicked.connect((self.reloadMsg))
-        # self.deletesaveMsg.clicked.connect((self.deleteMsg))
-        #
-        # # 메시지 추가 버튼들
-        # self.btnString.clicked.connect(self.addString)
-        # self.btnInt.clicked.connect(self.addInt)
-        # self.btnShort.clicked.connect(self.addShort)
-        # self.btnByte.clicked.connect(self.addByte)
-        # self.btnDouble.clicked.connect(self.addDouble)
-        # self.btnJson.clicked.connect(self.addJson)
-        #
-        #
-        #
-        # self.saveMsg.clicked.connect((self.saveMsgMethod))
-        #
-        # # ComboBox에 기능 연결
+
         # self.typeCombo.currentIndexChanged.connect((self.onchangeType))
-        # self.scCombo.currentIndexChanged.connect((self.onchangeScType))
-        # self.msgSavedList.currentIndexChanged.connect((self.onChangeSaveMsgCombo))
-        # self.qtMsgList.currentIndexChanged.connect((self.changeMsgListCombo))
-        #
         # self.nullCheckBox.stateChanged.connect((self.nullCheckBoxMethod))
         # self.decodeYn.stateChanged.connect((self.decodeYnMethod))
-        #
-        #
-        # # onChange 기능 연결
         # self.msgArea.textChanged.connect(self.textChange)
 
 
@@ -193,32 +164,6 @@ class InitWindow(QMainWindow, form_class):
         for item in self.socketList:
             if item['SK_TYPE'] == 'SERVER':
                 item['SK_INFO'].sendToClientAll(msgBytes)
-
-    def msgAddBtMethod(self):
-        msgTy = self.msgTyCombo.currentText()
-        msg = self.msgArea.toPlainText()
-        if msg == '':
-            return
-        try:
-
-            if msgTy == 'JSON':
-                jsonDataList = json.loads(msg)
-                for i in range(0, len(jsonDataList)):
-                    msgObj = {'MSG_TY': jsonDataList[i]['MSG_TY'], 'VALUE': jsonDataList[i]['VALUE'],  'VAL_LEN': jsonDataList[i]['VAL_LEN']}
-                    self.msgList.append(str(jsonDataList[i]['VALUE']))
-                    self.sendMsg.append(msgObj)
-            else:
-                msgTemp = {}
-                msgTemp['MSG_TY'] = msgTy
-                msgTemp['VALUE'] = msg
-
-                self.sendMsg.append(msgTemp)
-                self.msgList.append(msg)
-        except:
-            traceback.print_exc()
-            self.inputTableRow(['ERROR', ' ',' Msg Type error'])
-
-
 
     # 체결결과 송신
     def sendRslt(self, bytes):
@@ -306,78 +251,6 @@ class InitWindow(QMainWindow, form_class):
 
             return temp
 
-    def converForSend22(self, msgTy, msg):
-        temp = []
-        #print('msg::' + msg)
-
-        try:
-
-            if msgTy == 'STRING':
-                return msg.encode('utf-8')
-
-            elif msgTy == 'INT':
-                value = 0
-                if type(msg) == str:
-                    value = int(msg)
-                else:
-                    value = msg
-                return value.to_bytes(4, byteorder='big')
-
-            elif msgTy == 'SHORT':
-                if type(msg) == str:
-                    value = int(msg)
-                else:
-                    value = msg
-
-                shortValue = value & 0xffff
-                return shortValue.to_bytes(2,byteorder='big', signed=True)
-
-            elif msgTy == 'BYTE':
-                if type(msg) == int:
-                    decimal_value = msg
-                    byte_array = decimal_value.to_bytes(1, byteorder='big')
-                    return byte_array
-                # elif msg.isdigit():  # 입력값이 숫자인 경우
-                #     decimal_value = int(msg)
-                #     byte_array = decimal_value.to_bytes(4, byteorder='big')
-                #     return byte_array
-                else:  # 입력값이 문자열인 경우
-                    return msg.encode('utf-8')
-
-
-
-            elif msgTy == 'DOUBLE':
-                try:
-                    fval = float(msg)
-                    return struct.pack('!d', fval)
-                except ValueError:
-                    return struct.pack('!d', msg)
-
-                # fval = float(msg)
-                # # 자바는 64비트 IEEE 754 표준을 사용하여 double 값을 표현하고, 파이썬은 64비트 부동 소수점 형식을 사용합니다.
-                # # 따라서 자바와 통신할때에는 아래 포맷을 거쳐야한다.
-                # # bytes_data = struct.pack('!d', fval)
-                # # bytes_data = struct.pack('d', float(doubleVal)) 파이선끼리 통신할 경우
-                #
-                # return struct.pack('!d', fval)
-
-            elif msgTy == 'LONG':
-                doubleVal = None
-                if type(msg) == str:
-                    doubleVal = float(msg)
-                else:
-                    doubleVal = msg
-                bytes_data = struct.pack('d', doubleVal)
-                print(bytes_data)
-                for i in range(0, len(bytes_data)):
-                    temp.append(bytes_data[i])
-
-                return temp
-
-        except:
-            logger.info('PARSING MSG JSON FORMAT ERROR !!!')
-
-
 
 
     def lockTargetYn(self, Yn):
@@ -386,7 +259,8 @@ class InitWindow(QMainWindow, form_class):
             self.PORT.setReadOnly(True)
             self.TYPES.setEnabled(False)
 
-            self.KEEPALIVE.setReadOnly(True)
+            #self.KEEPALIVE.setReadOnly(True)
+            self.BATCHSIZE.setReadOnly(True)
             self.MINANG.setReadOnly(True)
             self.MAXANG.setReadOnly(True)
             self.MINTOR.setReadOnly(True)
@@ -395,7 +269,8 @@ class InitWindow(QMainWindow, form_class):
             self.IP.setReadOnly(False)
             self.PORT.setReadOnly(False)
             self.TYPES.setEnabled(True)
-            self.KEEPALIVE.setReadOnly(False)
+            #self.KEEPALIVE.setReadOnly(False)
+            self.BATCHSIZE.setReadOnly(False)
             self.MINANG.setReadOnly(False)
             self.MAXANG.setReadOnly(False)
             self.MINTOR.setReadOnly(False)
@@ -442,18 +317,32 @@ class InitWindow(QMainWindow, form_class):
 
         # self.reciveMsgArea.append('[ {} ]  {}'.format(now.strftime('%H:%M:%S'), test))
 
+    def lpad(self, input_string, length, padding_char):
+        if len(input_string) >= length:
+            return input_string
+        else:
+            padding_length = length - len(input_string)
+            padding = padding_char * padding_length
+            return padding + input_string
 
 
     def rpad(self, input_string, length, padding_char):
-        # 문자열이 지정된 길이 이상인 경우 그대로 반환
         if len(input_string) >= length:
             return input_string
-        # 필요한 만큼 다른 문자로 채워서 반환
         return input_string + (padding_char * (length - len(input_string)))
 
     # 아틀라스콥코 응답 처리
     def sendPf6000Msg(self,mid):
         try:
+
+            minAng = self.MINANG.value()
+            maxAng = self.MAXANG.value()
+            minTorque = self.MINTOR.value()
+            maxTorque = self.MAXTOR.value()
+            ang = self.ANGLE.value()
+            tor = self.TORQUE.value()
+
+
 
             if(mid=='0061'):
                 print('최신작업결과 송신')
@@ -466,19 +355,69 @@ class InitWindow(QMainWindow, form_class):
                 channelId_2 = '02'+self.rpad('00', 2, ' ')
                 ctrlName_3 = '03'+self.rpad('00000000', 25, ' ')
                 vinNo_4 = '04'+self.rpad(self.BODY.text(), 25, ' ')
-                jobId_5 = '05'+self.rpad(self.JOB.text(), 2, ' ')
-                parameterSet_6 = '06' + self.rpad('00', 2, ' ')
+                jobId_5 = '05'+self.rpad(self.JOB.text(), 2, '0')
+                parameterSet_6 = '06' + self.rpad('000', 3, ' ')
+                batchSize_7 = '07' + self.lpad(self.BATCHSIZE.text(), 4, '0')
+                batchCnt_8  = '08' + self.lpad(self.BATCHCNT.text(), 4, '0')
+
+                tighteningRslt_9 = '091' # 확인필요
+
+                torStat_10 = ''
+                if(tor >= minTorque and tor <= maxTorque):
+                    torStat_10 = '101'
+                elif(tor < minTorque):
+                    torStat_10 = '100'
+                elif (tor > maxTorque):
+                    torStat_10 = '102'
+                else:
+                    torStat_10= '100'
+
+                angStat_11 = ''
+                if (ang >= minAng and ang <= maxAng):
+                    angStat_11 = '111'
+                elif (ang < minAng):
+                    angStat_11 = '110'
+                elif (ang > maxAng):
+                    angStat_11 = '112'
+                else:
+                    angStat_11 = '110'
 
 
-                # 0:해더영역,  1:cellId , 2:channelId , 3: 컨트롤러이름
-                # 4: vin_no  5: Job Id , 6:param  ,   7: 배치 사이즈
-                # 8: 배치 카운터  9: 체결 상태   , 10: 토크 상태 ,  11: 앵글 상태
+                minTorque_12 = '12'+self.lpad(str(minTorque), 6, '0')
+                maxTorque_13 = '13'+self.lpad(str(maxTorque), 6, '0')
 
-                print(header_0+cellId_1+channelId_2+ctrlName_3+vinNo_4+jobId_5)
-                msgByte = bytearray(header_0+cellId_1+channelId_2+ctrlName_3+vinNo_4+jobId_5, 'utf-8')
+                torqueFnTarget_14 = '14000000'  # 확인필요
 
+                tor_15 = '15'+self.lpad(str(tor), 6, '0')
+
+                minAng_16 = '16' + self.lpad(str(minAng), 5, '0')
+                maxAng_17 = '17' + self.lpad(str(maxAng), 5, '0')
+
+                angFnTarget_18 = '1800000'  # 확인필요
+
+                ang_19 = '19' + self.lpad(str(ang), 5, '0')
+
+                now = datetime.now()
+                timeStamp_20 = '20'+now.strftime("%Y-%m-%d:%H:%M:%S")
+                timeStamp_21 = '21'+now.strftime("%Y-%m-%d:%H:%M:%S")
+                batchStat_22 = ''
+
+                if(int(self.BATCHCNT.text()) == int(self.BATCHSIZE.value())):
+                    batchStat_22 = '221'
+                else:
+                    batchStat_22 = '220'
+
+                tighteningId_23 = '231234567890'
+                #tighteningStat_23= '231234567890'+ str(now.microsecond // 100)
+                #print(tighteningId_23)
+                rlstMsg = header_0+cellId_1+channelId_2+ctrlName_3+vinNo_4+jobId_5+parameterSet_6+batchSize_7+batchCnt_8+tighteningRslt_9\
+                          +torStat_10+angStat_11+minTorque_12+maxTorque_13+torqueFnTarget_14+tor_15+minAng_16+maxAng_17+angFnTarget_18+ang_19+timeStamp_20\
+                            +timeStamp_21+batchStat_22+tighteningId_23
+                #print(rlstMsg)
+                msgByte = bytearray(rlstMsg, 'utf-8')
                 print(len(msgByte))
                 self.sendMsgForAllClient(msgByte)
+                self.BATCHCNT.setText(self.lpad(str(int(self.BATCHCNT.text())+1), 2, '0'))
 
             elif(mid=='0005'):
                 print('')
@@ -504,65 +443,68 @@ class InitWindow(QMainWindow, form_class):
     #0005는 요청에대한 응답 메시지
     @pyqtSlot(bytearray, str)
     def serverReciveDataMethod(self, msgBytes, ipPort):
+        try:
+            retunr0005 = False
+            start_index = 4
+            length = 4
+            midBytes = msgBytes[start_index:start_index + length]
+            byte_data = bytes(midBytes)
+            strMid = byte_data.decode('utf-8') # MID 추출
 
-        retunr0005 = False
-        start_index = 4
-        length = 4
-        midBytes = msgBytes[start_index:start_index + length]
-        byte_data = bytes(midBytes)
-        strMid = byte_data.decode('utf-8') # MID 추출
+            self.LOG.append('[IN] : '+strMid)
+            if(strMid == '0060'): # 마지막 작업결과 구독 요청   리턴: 0005 + mid 0060
+                print('request MID ::'+strMid)
+                retunr0005 = True
 
-        self.LOG.append(strMid)
-        if(strMid == '0060'): # 마지막 작업결과 구독 요청   리턴: 0005 + mid 0060
-            print('request MID ::'+strMid)
-            retunr0005 = True
+            elif(strMid == '0062'): # 작업결과 송신 응답
+                print('request MID ::'+strMid)
+                # print('request body ::' + msgBytes)
 
-        elif(strMid == '0062'): # 작업결과 송신 응답
-            print('request MID ::'+strMid)
-            # print('request body ::' + msgBytes)
+            elif (strMid == '0064'):  # 특정 작업결과 요청  리턴: 0065
+                print('request MID ::' + strMid)
 
-        elif (strMid == '0064'):  # 특정 작업결과 요청  리턴: 0065
-            print('request MID ::' + strMid)
+            elif (strMid == '0001'):  # 통신시작 응답   리턴: 0002
+                print('request MID ::' + strMid)
+                msgEncoded = '00200002000000000000'
+                msg = bytearray(msgEncoded, 'utf-8')
+                self.sendMsgForAllClient(msg)
 
-        elif (strMid == '0001'):  # 통신시작 응답   리턴: 0002
-            print('request MID ::' + strMid)
-            msgEncoded = '00200002000000000000'
-            msg = bytearray(msgEncoded, 'utf-8')
-            self.sendMsgForAllClient(msg)
+            elif (strMid == '0080'):  # 시간 동기화 리턴:0005 + mid
+                print('request MID ::' + strMid)
 
-        elif (strMid == '0080'):  # 시간 동기화 리턴:0005 + mid
-            print('request MID ::' + strMid)
+            elif (strMid == '0082'):  # 시간 동기화 리턴:0005 + mid
+                print('request MID ::' + strMid)
 
-        elif (strMid == '0082'):  # 시간 동기화 리턴:0005 + mid
-            print('request MID ::' + strMid)
+            elif (strMid == '0050'):  # BODY_NO 수신
+                print('request MID ::' + strMid)
+                self.TORQUE.setValue(0.0)
+                self.ANGLE.setValue(0.0)
+                retunr0005 = True
 
-        elif (strMid == '0050'):  # BODY_NO 수신
-            print('request MID ::' + strMid)
-            self.TORQUE.setValue(0.0)
-            self.ANGLE.setValue(0.0)
-            retunr0005 = True
+                bodyNO = self.convertPf6000Msg(strMid,msgBytes)
+                self.BODY.setText(bodyNO)
 
-            bodyNO = self.convertPf6000Msg(strMid,msgBytes)
-            self.BODY.setText(bodyNO)
+            elif (strMid == '0038'):  # JOB_ID 수신
+                print('request MID ::' + strMid)
+                self.TORQUE.setValue(0.0)
+                self.ANGLE.setValue(0.0)
+                self.BATCHCNT.setText(self.lpad('1', 2 ,'0'))
+                retunr0005 = True
 
-        elif (strMid == '0038'):  # JOB_ID 수신
-            print('request MID ::' + strMid)
-            self.TORQUE.setValue(0.0)
-            self.ANGLE.setValue(0.0)
-            retunr0005 = True
+                jobId = self.convertPf6000Msg(strMid, msgBytes)
+                self.JOB.setText(jobId)
 
-            jobId = self.convertPf6000Msg(strMid, msgBytes)
-            self.JOB.setText(jobId)
-
-        elif (strMid == '9999'):  # 킵어라이브 수신   리턴:
-            print('request MID ::' + strMid)
+            elif (strMid == '9999'):  # 킵어라이브 수신   리턴:
+                print('request MID ::' + strMid)
 
 
 
-        if(retunr0005):
-            msgEncoded = '00240005001000000000' + strMid
-            msg = bytearray(msgEncoded, 'utf-8')
-            self.sendMsgForAllClient(msg)
+            if(retunr0005):
+                msgEncoded = '00240005001000000000' + strMid
+                msg = bytearray(msgEncoded, 'utf-8')
+                self.sendMsgForAllClient(msg)
+        except:
+            traceback.print_exc()
 
     @pyqtSlot(str, str)
     def serverStatLogMethod(self, revicevLog, ipPort):
