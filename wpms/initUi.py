@@ -344,6 +344,9 @@ class InitWindow(QMainWindow, form_class):
 
 
 
+
+
+
             if(mid=='0061'):
                 print('최신작업결과 송신')
                 # 슬레쉬 기준으로 각 데이터 파싱 필요
@@ -409,7 +412,7 @@ class InitWindow(QMainWindow, form_class):
 
                 tighteningId_23 = '231234567890'
                 #tighteningStat_23= '231234567890'+ str(now.microsecond // 100)
-                #print(tighteningId_23)
+                print(tighteningId_23)
                 rlstMsg = header_0+cellId_1+channelId_2+ctrlName_3+vinNo_4+jobId_5+parameterSet_6+batchSize_7+batchCnt_8+tighteningRslt_9\
                           +torStat_10+angStat_11+minTorque_12+maxTorque_13+torqueFnTarget_14+tor_15+minAng_16+maxAng_17+angFnTarget_18+ang_19+timeStamp_20\
                             +timeStamp_21+batchStat_22+tighteningId_23
@@ -417,7 +420,12 @@ class InitWindow(QMainWindow, form_class):
                 msgByte = bytearray(rlstMsg, 'utf-8')
                 print(len(msgByte))
                 self.sendMsgForAllClient(msgByte)
-                self.BATCHCNT.setText(self.lpad(str(int(self.BATCHCNT.text())+1), 2, '0'))
+
+                batchSize = int(self.BATCHSIZE.value())
+                batchCnt = int(self.BATCHCNT.text())
+                if (batchSize != batchCnt):
+                    self.BATCHCNT.setText(self.lpad(str(int(self.BATCHCNT.text()) + 1), 2, '0'))
+
 
             elif(mid=='0005'):
                 print('')
