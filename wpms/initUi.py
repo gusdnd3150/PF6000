@@ -351,10 +351,11 @@ class InitWindow(QMainWindow, form_class):
                 header_0 = '023100610010        '
                 cellId_1 = '01'+self.rpad('0000', 4, ' ')
                 channelId_2 = '02'+self.rpad('00', 2, ' ')
-                ctrlName_3 = '03'+self.rpad('00000000', 25, ' ')
+                ctrlName_3 = '03'+self.rpad(self.IP.text(), 25, ' ')
                 vinNo_4 = '04'+self.rpad(self.BODY.text(), 25, ' ')
                 jobId_5 = '05'+self.rpad(self.JOB.text(), 2, '0')
-                parameterSet_6 = '06' + self.rpad('000', 3, ' ')
+                # parameterSet_6 = '06' + self.rpad('000', 3, ' ')   # pset_id
+                parameterSet_6 = '06' + self.lpad(str(self.PSET.value()), 3, '0')  # pset_id
                 batchSize_7 = '07' + self.lpad(self.BATCHSIZE.text(), 4, '0')
                 batchCnt_8  = '08' + self.lpad(self.BATCHCNT.text(), 4, '0')
 
