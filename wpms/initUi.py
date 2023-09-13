@@ -36,7 +36,7 @@ form_class = uic.loadUiType(form)[0]
 
 # 콤보 영역
 scCombo = ['CLIENT', 'SERVER']
-typeCombo = ['TCP', 'UDP']
+typeCombo = ['TCP']
 
 width = 769
 height = 430
@@ -55,6 +55,8 @@ class InitWindow(QMainWindow, form_class):
     isRunClient = False
     isRunServer = False
     msgDecoder = None
+
+    isDone = False
 
     def __init__(self):
 
@@ -337,6 +339,9 @@ class InitWindow(QMainWindow, form_class):
             ang = self.ANGLE.value()
             tor = int(self.TORQUE.value()*100)
 
+
+            isPass = True
+
             if(mid=='0061'):
                 print('최신작업결과 송신')
                 # 슬레쉬 기준으로 각 데이터 파싱 필요
@@ -353,28 +358,38 @@ class InitWindow(QMainWindow, form_class):
                 batchSize_7 = '07' + self.lpad(self.BATCHSIZE.text(), 4, '0')
                 batchCnt_8  = '08' + self.lpad(self.BATCHCNT.text(), 4, '0')
 
-                tighteningRslt_9 = '091' # 확인필요
+
 
                 torStat_10 = ''
                 if(tor >= minTorque and tor <= maxTorque):
                     torStat_10 = '101'
                 elif(tor < minTorque):
                     torStat_10 = '100'
+                    isPass = False
                 elif (tor > maxTorque):
                     torStat_10 = '102'
+                    isPass = False
                 else:
                     torStat_10= '100'
+                    isPass = False
 
                 angStat_11 = ''
                 if (ang >= minAng and ang <= maxAng):
                     angStat_11 = '111'
                 elif (ang < minAng):
                     angStat_11 = '110'
+                    isPass = False
                 elif (ang > maxAng):
                     angStat_11 = '112'
+                    isPass = False
                 else:
                     angStat_11 = '110'
+                    isPass = False
 
+                if(isPass == False):
+                    tighteningRslt_9 = '090'  # 확인필요
+                else:
+                    tighteningRslt_9 = '091'  # 확인필요
 
                 minTorque_12 = '12'+self.lpad(str(minTorque), 6, '0')
                 maxTorque_13 = '13'+self.lpad(str(maxTorque), 6, '0')
@@ -395,7 +410,7 @@ class InitWindow(QMainWindow, form_class):
                 timeStamp_21 = '21'+now.strftime("%Y-%m-%d:%H:%M:%S")
                 batchStat_22 = ''
 
-                if(int(self.BATCHCNT.text()) == int(self.BATCHSIZE.value())):
+                if(int(self.BATCHCNT.text()) == int(self.BATCHSIZE.value()) and isPass == True):
                     batchStat_22 = '221'
                 else:
                     batchStat_22 = '220'
@@ -418,7 +433,7 @@ class InitWindow(QMainWindow, form_class):
                 logger.info('체결결과 Send :: ' + rlstMsg)
                 batchSize = int(self.BATCHSIZE.value())
                 batchCnt = int(self.BATCHCNT.text())
-                if (batchSize != batchCnt):
+                if (batchSize != batchCnt and isPass == True):
                     self.BATCHCNT.setText(self.lpad(str(int(self.BATCHCNT.text()) + 1), 2, '0'))
 
 
@@ -483,6 +498,7 @@ class InitWindow(QMainWindow, form_class):
                 self.TORQUE.setValue(0.0)
                 self.ANGLE.setValue(50)
                 retunr0005 = True
+                self.isDone = False
 
                 bodyNO = self.convertPf6000Msg(strMid,msgBytes)
                 self.BODY.setText(bodyNO)
@@ -491,6 +507,7 @@ class InitWindow(QMainWindow, form_class):
                 print('request MID ::' + strMid)
                 self.TORQUE.setValue(0.0)
                 self.ANGLE.setValue(50)
+                self.isDone = False
                 self.BATCHCNT.setText(self.lpad('1', 2 ,'0'))
                 retunr0005 = True
 
