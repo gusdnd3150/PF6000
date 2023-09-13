@@ -330,12 +330,12 @@ class InitWindow(QMainWindow, form_class):
     def sendPf6000Msg(self,mid):
         try:
 
-            minAng = self.MINANG.value()*100
-            maxAng = self.MAXANG.value()*100
-            minTorque = self.MINTOR.value()*100
-            maxTorque = self.MAXTOR.value()*100
-            ang = self.ANGLE.value()*100
-            tor = self.TORQUE.value()*100
+            minAng = self.MINANG.value()
+            maxAng = self.MAXANG.value()
+            minTorque = int(self.MINTOR.value())*100
+            maxTorque = int(self.MAXTOR.value())*100
+            ang = self.ANGLE.value()
+            tor = int(self.TORQUE.value())*100
 
             if(mid=='0061'):
                 print('최신작업결과 송신')
@@ -481,7 +481,7 @@ class InitWindow(QMainWindow, form_class):
             elif (strMid == '0050'):  # BODY_NO 수신
                 print('request MID ::' + strMid)
                 self.TORQUE.setValue(0.0)
-                self.ANGLE.setValue(0.0)
+                self.ANGLE.setValue(50)
                 retunr0005 = True
 
                 bodyNO = self.convertPf6000Msg(strMid,msgBytes)
@@ -490,7 +490,7 @@ class InitWindow(QMainWindow, form_class):
             elif (strMid == '0038' or strMid == '0039' ):  # JOB_ID 수신
                 print('request MID ::' + strMid)
                 self.TORQUE.setValue(0.0)
-                self.ANGLE.setValue(0.0)
+                self.ANGLE.setValue(50)
                 self.BATCHCNT.setText(self.lpad('1', 2 ,'0'))
                 retunr0005 = True
 
