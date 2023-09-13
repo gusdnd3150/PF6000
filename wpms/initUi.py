@@ -332,10 +332,10 @@ class InitWindow(QMainWindow, form_class):
 
             minAng = self.MINANG.value()
             maxAng = self.MAXANG.value()
-            minTorque = int(self.MINTOR.value())*100
-            maxTorque = int(self.MAXTOR.value())*100
+            minTorque = int(self.MINTOR.value()*100)
+            maxTorque = int(self.MAXTOR.value()*100)
             ang = self.ANGLE.value()
-            tor = int(self.TORQUE.value())*100
+            tor = int(self.TORQUE.value()*100)
 
             if(mid=='0061'):
                 print('최신작업결과 송신')
