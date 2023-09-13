@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from wpms.initUi import InitWindow
-import conf.logconfig as logge
+import conf.logconfig as logger
 
 # app = QApplication(sys.argv)
 # myWindow = InitWindow()

@@ -76,11 +76,6 @@ class InitWindow(QMainWindow, form_class):
         self.setComboMethod()
         self.RESULTSEND.clicked.connect((self.sendRslt))
 
-        # self.typeCombo.currentIndexChanged.connect((self.onchangeType))
-        # self.nullCheckBox.stateChanged.connect((self.nullCheckBoxMethod))
-        # self.decodeYn.stateChanged.connect((self.decodeYnMethod))
-        # self.msgArea.textChanged.connect(self.textChange)
-
 
     # start 버튼
     def uiStart(self):
@@ -165,7 +160,7 @@ class InitWindow(QMainWindow, form_class):
             if item['SK_TYPE'] == 'SERVER':
                 item['SK_INFO'].sendToClientAll(msgBytes)
 
-    # 체결결과 송신
+    # 체결결과 송신 버튼
     def sendRslt(self, bytes):
         if(self.isRunServer == False):
             return
@@ -335,17 +330,12 @@ class InitWindow(QMainWindow, form_class):
     def sendPf6000Msg(self,mid):
         try:
 
-            minAng = self.MINANG.value()
-            maxAng = self.MAXANG.value()
-            minTorque = self.MINTOR.value()
-            maxTorque = self.MAXTOR.value()
-            ang = self.ANGLE.value()
-            tor = self.TORQUE.value()
-
-
-
-
-
+            minAng = self.MINANG.value()*100
+            maxAng = self.MAXANG.value()*100
+            minTorque = self.MINTOR.value()*100
+            maxTorque = self.MAXTOR.value()*100
+            ang = self.ANGLE.value()*100
+            tor = self.TORQUE.value()*100
 
             if(mid=='0061'):
                 print('최신작업결과 송신')
@@ -410,17 +400,22 @@ class InitWindow(QMainWindow, form_class):
                 else:
                     batchStat_22 = '220'
 
-                tighteningId_23 = '231234567890'
-                #tighteningStat_23= '231234567890'+ str(now.microsecond // 100)
-                print(tighteningId_23)
+                # 마이크로초 정보를 추가합니다.
+                microseconds = now.microsecond
+                # 마이크로초를 6자리로 맞춰줍니다.
+                microseconds_str = str(microseconds).zfill(10)
+                tighteningId_23 = '23'+str(microseconds_str)
+
+
                 rlstMsg = header_0+cellId_1+channelId_2+ctrlName_3+vinNo_4+jobId_5+parameterSet_6+batchSize_7+batchCnt_8+tighteningRslt_9\
                           +torStat_10+angStat_11+minTorque_12+maxTorque_13+torqueFnTarget_14+tor_15+minAng_16+maxAng_17+angFnTarget_18+ang_19+timeStamp_20\
                             +timeStamp_21+batchStat_22+tighteningId_23
-                #print(rlstMsg)
+                print(rlstMsg)
                 msgByte = bytearray(rlstMsg, 'utf-8')
                 print(len(msgByte))
                 self.sendMsgForAllClient(msgByte)
 
+                logger.info('체결결과 Send :: ' + rlstMsg)
                 batchSize = int(self.BATCHSIZE.value())
                 batchCnt = int(self.BATCHCNT.text())
                 if (batchSize != batchCnt):
@@ -441,9 +436,9 @@ class InitWindow(QMainWindow, form_class):
         reuslt = ""
 
         if (mid == '0050'):  # 25자리 BODY_NO 파싱
-            reuslt = bytes[defaultHdLen:].decode('utf-8')
-        elif (mid == '0038'): # 2자리 JOB_ID 파싱
-            reuslt = bytes[defaultHdLen:].decode('utf-8')
+            reuslt = bytes[defaultHdLen:defaultHdLen+10].decode('utf-8')
+        elif (mid == '0038' or mid == '0039'): # 2자리 JOB_ID 파싱
+            reuslt = bytes[defaultHdLen:defaultHdLen+2].decode('utf-8')
 
         return reuslt.strip()
 
@@ -492,7 +487,7 @@ class InitWindow(QMainWindow, form_class):
                 bodyNO = self.convertPf6000Msg(strMid,msgBytes)
                 self.BODY.setText(bodyNO)
 
-            elif (strMid == '0038'):  # JOB_ID 수신
+            elif (strMid == '0038' or strMid == '0039' ):  # JOB_ID 수신
                 print('request MID ::' + strMid)
                 self.TORQUE.setValue(0.0)
                 self.ANGLE.setValue(0.0)
