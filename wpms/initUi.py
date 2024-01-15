@@ -352,12 +352,29 @@ class InitWindow(QMainWindow, form_class):
                 cellId_1 = '01'+self.rpad('0000', 4, ' ')
                 channelId_2 = '02'+self.rpad('00', 2, ' ')
                 ctrlName_3 = '03'+self.rpad(self.IP.text(), 25, ' ')
-                vinNo_4 = '04'+self.rpad(self.BODY.text(), 25, ' ')
-                jobId_5 = '05'+self.rpad(self.JOB.text(), 2, '0')
+
+                vinStr = ''
+                jobStr = '1'
+                batCntStr = '0'
+                if(self.BODY.text() != ''):
+                    vinStr = self.BODY.text()
+                if(self.JOB.text() != ''):
+                    jobStr = self.JOB.text()
+
+                if (self.BATCHCNT.text() == ''):
+                    batCntStr = '01'
+                    print('ddddd' + batCntStr)
+                else:
+                    print('sssss' + batCntStr)
+                    batCntStr = self.BATCHSIZE.text()
+
+
+                vinNo_4 = '04'+self.rpad(vinStr, 25, ' ')
+                jobId_5 = '05'+self.rpad(jobStr, 2, '0')
                 # parameterSet_6 = '06' + self.rpad('000', 3, ' ')   # pset_id
                 parameterSet_6 = '06' + self.lpad(str(self.PSET.value()), 3, '0')  # pset_id
                 batchSize_7 = '07' + self.lpad(self.BATCHSIZE.text(), 4, '0')
-                batchCnt_8  = '08' + self.lpad(self.BATCHCNT.text(), 4, '0')
+                batchCnt_8  = '08' + self.lpad(batCntStr, 4, '0')
 
 
 
@@ -411,7 +428,7 @@ class InitWindow(QMainWindow, form_class):
                 timeStamp_21 = '21'+now.strftime("%Y-%m-%d:%H:%M:%S")
                 batchStat_22 = ''
 
-                if(int(self.BATCHCNT.text()) == int(self.BATCHSIZE.value()) and isPass == True):
+                if(int(batCntStr) == int(self.BATCHSIZE.value()) and isPass == True):
                     batchStat_22 = '221'
                 else:
                     batchStat_22 = '220'
@@ -433,10 +450,15 @@ class InitWindow(QMainWindow, form_class):
 
                 logger.info('체결결과 Send :: ' + rlstMsg)
                 batchSize = int(self.BATCHSIZE.value())
-                batchCnt = int(self.BATCHCNT.text())
-                if (batchSize != batchCnt and isPass == True):
-                    self.BATCHCNT.setText(self.lpad(str(int(self.BATCHCNT.text()) + 1), 2, '0'))
+                batchCnt = int(batCntStr)
+                print('배치 비교 ::'+ str(batchSize))
+                print('배치 비교 ::' + str(batchCnt))
 
+                if (batchSize != batchCnt and isPass == True):
+                    print('잡수정 패스 :: ')
+                    self.BATCHCNT.setText(self.lpad(str(int(batCntStr) + 1), 2, '0'))
+
+                print('잡 패스 :: '+ str(isPass))
 
             elif(mid=='0005'):
                 print('')
