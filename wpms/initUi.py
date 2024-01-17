@@ -352,20 +352,15 @@ class InitWindow(QMainWindow, form_class):
                 channelId_2 = '02'+self.rpad('00', 2, ' ')
                 ctrlName_3 = '03'+self.rpad(self.IP.text(), 25, ' ')
 
-                vinStr = ''
-                jobStr = '1'
-                batCntStr = '0'
-                if(self.BODY.text() != ''):
-                    vinStr = self.BODY.text()
-                if(self.JOB.text() != ''):
-                    jobStr = self.JOB.text()
-
-                if (self.BATCHCNT.text() == ''):
+                vinStr = self.BODY.text()
+                jobStr = self.JOB.text()
+                batCntStr = self.BATCHCNT.text()
+                if(vinStr == ''):
+                    vinStr = ''
+                if(jobStr == ''):
+                    jobStr = ''
+                if (batCntStr == ''):
                     batCntStr = '01'
-                    print('ddddd' + batCntStr)
-                else:
-                    print('sssss' + batCntStr)
-                    batCntStr = self.BATCHSIZE.text()
 
 
                 vinNo_4 = '04'+self.rpad(vinStr, 25, ' ')
