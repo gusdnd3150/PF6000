@@ -38,7 +38,7 @@ form_class = uic.loadUiType(form)[0]
 scCombo = ['CLIENT', 'SERVER']
 typeCombo = ['TCP']
 
-width = 769
+width = 1107
 height = 430
 
 
@@ -55,11 +55,9 @@ class InitWindow(QMainWindow, form_class):
     isRunClient = False
     isRunServer = False
     msgDecoder = None
-
     isDone = False
 
     def __init__(self):
-
         super().__init__()
         self.setupUi(self)
         self.setWindowIcon(QIcon(resource_path('icon.ico')))
@@ -153,7 +151,8 @@ class InitWindow(QMainWindow, form_class):
     def fnKeepalive(self):
         msgEncoded = '00209999001000000000'
         msg = bytearray(msgEncoded, 'utf-8')
-        self.sendMsgForAllClient(msg)
+        #self.LOG.append('[OUT]    :: ' + msgEncoded)
+        #self.sendMsgForAllClient(msg)
 
 
     def sendMsgForAllClient(self, msgBytes):
@@ -446,6 +445,7 @@ class InitWindow(QMainWindow, form_class):
                 print(rlstMsg)
                 msgByte = bytearray(rlstMsg, 'utf-8')
                 print(len(msgByte))
+                self.LOG.append('[OUT]    :: ' + rlstMsg)
                 self.sendMsgForAllClient(msgByte)
 
                 logger.info('체결결과 Send :: ' + rlstMsg)
@@ -485,6 +485,7 @@ class InitWindow(QMainWindow, form_class):
     @pyqtSlot(bytearray, str)
     def serverReciveDataMethod(self, msgBytes, ipPort):
         try:
+            self.LOG.append('[IN]    :: ' + msgBytes.decode('utf-8'))
             retunr0005 = False
             start_index = 4
             length = 4
@@ -492,7 +493,7 @@ class InitWindow(QMainWindow, form_class):
             byte_data = bytes(midBytes)
             strMid = byte_data.decode('utf-8') # MID 추출
 
-            self.LOG.append('[IN] : '+strMid)
+
             if(strMid == '0060'): # 마지막 작업결과 구독 요청   리턴: 0005 + mid 0060
                 print('request MID ::'+strMid)
                 retunr0005 = True
@@ -506,8 +507,12 @@ class InitWindow(QMainWindow, form_class):
 
             elif (strMid == '0001'):  # 통신시작 응답   리턴: 0002
                 print('request MID ::' + strMid)
-                msgEncoded = '00200002000000000000'
+                msgEncoded = '00200002001000000000'  # //PF6000
+                #msgEncoded = '00200002   000000000' #//PF6000
+                # msgEncoded = '00200002000000000000' #//PF4000
+
                 msg = bytearray(msgEncoded, 'utf-8')
+                self.LOG.append('[OUT] : ' + msgEncoded)
                 self.sendMsgForAllClient(msg)
 
             elif (strMid == '0080'):  # 시간 동기화 리턴:0005 + mid
@@ -538,13 +543,17 @@ class InitWindow(QMainWindow, form_class):
                 self.JOB.setText(jobId)
 
             elif (strMid == '9999'):  # 킵어라이브 수신   리턴:
-                print('request MID ::' + strMid)
+                msgEncoded = '00209999001000000000'
+                msg = bytearray(msgEncoded, 'utf-8')
+                self.LOG.append('[OUT]    :: ' + msgEncoded)
+                self.sendMsgForAllClient(msg)
 
 
 
             if(retunr0005):
                 msgEncoded = '00240005001000000000' + strMid
                 msg = bytearray(msgEncoded, 'utf-8')
+                self.LOG.append('[OUT] :: ' + str(msgEncoded))
                 self.sendMsgForAllClient(msg)
         except:
             traceback.print_exc()
